@@ -33,6 +33,10 @@ app.get('/', (req, res) => {
   res.send('Hello World!')
 })
 
+app.get('/jobs', async(req, res) =>{
+    const result = await jobsCollection.find().toArray();
+    res.send(result);
+})
 
 app.post('/add-job', async(req, res)=>{
     const newData = {
