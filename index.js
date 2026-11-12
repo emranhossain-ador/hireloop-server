@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors"; 
 const app = express();
 
-import { MongoClient } from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
 import 'dotenv/config'
 
 
@@ -48,6 +48,12 @@ app.post('/add-job', async(req, res)=>{
     res.send(result);
 })
 
+
+app.delete('/jobs/:Id', async(req, res)=>{
+    const {Id} = req.params;
+    const result = await jobsCollection.deleteOne({_id: new ObjectId(Id)});
+    res.send(result);
+})
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}`)
