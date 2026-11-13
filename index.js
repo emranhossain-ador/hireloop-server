@@ -149,6 +149,50 @@ app.post('/job-applications', async (req, res) => {
 })
 
 
+app.get('/job-applications/:userId', async(req, res)=>{
+    const {userId} = req.params;
+
+    // Check valid user ID
+    if (!ObjectId.isValid(userId)) {
+        return res.status(400).send({
+            success: false,
+            message: "Invalid User ID"
+        });
+    }
+
+
+    const result = await jobApplicationsCollection.aggregate([
+        {
+            $match:{
+                userId: new ObjectId(userId)
+            }
+        },
+        {
+            $lookup:{
+                from: "jobs_list",
+                localField: "jobId",
+                foreignField: "_id",
+                as: "jobList"
+            }
+        },
+        {
+            $unwind: "$jobList"
+        },
+        {
+            $sort: {
+                appliedAt: -1
+            }
+        }
+    ]).toArray();
+
+    res.send({
+        success: true,
+        result
+    });
+
+})
+
+
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}`)
 })
