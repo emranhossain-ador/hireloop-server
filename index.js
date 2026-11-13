@@ -27,11 +27,13 @@ export async function connectToMongoDB() {
 const connetClient = await connectToMongoDB();
 const db = connetClient.db('hireloopdb');
 const jobsCollection = db.collection("jobs_list");
+const jobApplicationsCollection = db.collection("jobApplications");
 
 
 app.get('/', (req, res) => {
   res.send('Hello World!')
 })
+
 
 app.get('/jobs', async (req, res) => {
 
@@ -74,6 +76,7 @@ app.get('/job/:Id', async(req, res)=>{
     res.send(result);
 })
 
+
 app.post('/add-job', async(req, res)=>{
     const newData = {
         ...req.body,
@@ -90,6 +93,61 @@ app.delete('/jobs/:Id', async(req, res)=>{
     const result = await jobsCollection.deleteOne({_id: new ObjectId(Id)});
     res.send(result);
 })
+
+
+
+// Job Applications area
+
+app.post('/job-applications', async (req, res) => {
+    try {
+        
+        const {jobId, userId} = req.body;
+
+        //Check id valid or not
+        if(!ObjectId.isValid(jobId) || !ObjectId.isValid(userId)){
+            return res.status(400).send({success:false, message: "Invalid ID" }); 
+        };
+
+        // check job exits or not
+        const job = await jobsCollection.findOne({_id: new ObjectId(jobId)});
+
+        if (!job) {
+            return res.status(404).send({success:false, message: "Job not found" });
+        };
+
+        // check already apply or not
+        const exitsCheck = await jobApplicationsCollection.findOne({
+            jobId: new ObjectId(jobId),
+            userId: new ObjectId(userId)
+        });
+
+
+        if(exitsCheck){
+            return res.status(409).send({
+                success: false,
+                message: "You have already applied for this job"
+            });
+        };
+
+        const application = {
+            jobId: new ObjectId(jobId),
+            userId: new ObjectId(userId),
+            status: "Pending",
+            appliedAt: new Date()
+        };
+
+        const result = await jobApplicationsCollection.insertOne(application);
+        res.status(201).send({
+            success: true,
+            message: "Applied successfully!",
+            result
+        });
+
+    } catch (error) {
+        res.status(500).send({success:false, message: "Internal server error" });
+    }
+})
+
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}`)
