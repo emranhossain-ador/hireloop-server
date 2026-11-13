@@ -33,8 +33,44 @@ app.get('/', (req, res) => {
   res.send('Hello World!')
 })
 
-app.get('/jobs', async(req, res) =>{
-    const result = await jobsCollection.find().toArray();
+app.get('/jobs', async (req, res) => {
+
+    const query = {};
+
+    if (req.query.jobType) {
+        query.jobType = req.query.jobType;
+    }
+
+    if (req.query.jobCategory) {
+        query.jobCategory = req.query.jobCategory;
+    }
+
+    if (req.query.search) {
+        query.$or = [
+            {
+                jobTitle: {
+                    $regex: req.query.search,
+                    $options: 'i'
+                }
+            },
+            {
+                companyName: {
+                    $regex: req.query.search,
+                    $options: 'i'
+                }
+            }
+        ];
+    }
+
+    const result = await jobsCollection.find(query).toArray();
+
+    res.send(result);
+});
+
+
+app.get('/job/:Id', async(req, res)=>{
+    const {Id} = req.params;
+    const result = await jobsCollection.findOne({_id: new ObjectId(Id)});
     res.send(result);
 })
 
