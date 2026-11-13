@@ -149,6 +149,12 @@ app.post('/job-applications', async (req, res) => {
 })
 
 
+app.get('/job-applications/count/:userId', async(req, res)=>{
+    const {userId} = req.params;
+    const result = await jobApplicationsCollection.countDocuments({userId: new ObjectId(userId)});
+    res.send({count: result});
+});
+
 app.get('/job-applications/:userId', async(req, res)=>{
     const {userId} = req.params;
 
