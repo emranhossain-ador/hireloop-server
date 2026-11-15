@@ -106,6 +106,11 @@ app.delete('/jobs/:Id', async(req, res)=>{
 })
 
 
+app.get('/jobs/:userId/user', async(req, res)=>{
+    const {userId} = req.params;
+    const result = await jobsCollection.find({userId:userId}).toArray();
+    res.send(result);
+})
 
 // Job Applications area
 
