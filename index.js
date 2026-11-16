@@ -215,6 +215,79 @@ app.get('/job-applications/:userId', async(req, res)=>{
 });
 
 
+app.get('/recruiter/job-applications/:jobId', async (req, res) => {
+
+    const { jobId } = req.params;
+    
+
+    if (!ObjectId.isValid(jobId)) {
+        return res.status(400).send({
+            success: false,
+            message: "Invalid Job ID"
+        });
+    }
+
+
+    const result = await jobApplicationsCollection.aggregate([
+        {
+            $match: {
+                jobId: new ObjectId(jobId)
+            }
+        },
+        {
+            $lookup: {
+                from: "jobs_list",
+                localField: "jobId",
+                foreignField: "_id",
+                as: "jobInfo"
+            }
+        },
+        {
+            $lookup: {
+                from: "user",
+                localField: "userId",
+                foreignField: "_id",
+                as: "userInfo"
+            }
+        },
+        {
+            $unwind: {
+                path: "$jobInfo",
+                preserveNullAndEmptyArrays: true
+            }
+        },
+        {
+            $unwind: {
+                path: "$userInfo",
+                preserveNullAndEmptyArrays: true
+            }
+        },
+        {
+            $sort: {
+                appliedAt: -1
+            }
+        }
+    ]).toArray();
+
+    res.send({
+        success: true,
+        result
+    });
+});
+
+app.patch('/job-applications/:Id/status-change', async(req, res) =>{
+    const {Id} = req.params;
+    const query = {_id: new ObjectId(Id)};
+    const updateDoc = {
+        $set:{
+            status: req.body.status
+        }
+    }
+    const result = await jobApplicationsCollection.updateOne(query, updateDoc);
+    res.send(result);
+})
+
+
 // Payments related api
 app.post('/payments/checkout-verify', async(req, res)=>
 {
