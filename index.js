@@ -14,6 +14,7 @@ const PORT = process.env.PORT || 5001;
 app.use(cors());
 app.use(express.json());
 
+
 const client = new MongoClient(process.env.MONGODB_AUTH_URL);
 
 export async function connectToMongoDB() {
@@ -29,6 +30,7 @@ export async function connectToMongoDB() {
 const connetClient = await connectToMongoDB();
 const db = connetClient.db('hireloopdb');
 const users = db.collection("user");
+const sessions = db.collection("session");
 const jobsCollection = db.collection("jobs_list");
 const jobApplicationsCollection = db.collection("jobApplications");
 const payments = db.collection("payments");
@@ -39,6 +41,74 @@ app.get('/', (req, res) => {
 })
 
 
+
+// Token verify
+const tokenVerify = async(req, res, next)=>{
+
+    const authHeader = req.headers.authorization;
+
+    if(!authHeader){
+        res.status(401).send({massage: "Unauthorized!!"});
+        return;
+    }
+
+    const token = authHeader.split(' ')[1];
+    
+    if(!token){
+        res.status(401).send({massage: "Unauthorized!!"});
+        return; 
+    }
+
+    const query = { token };
+    const session = await sessions.findOne(query);
+
+    if(!session){
+        res.status(401).send({massage: "Unauthorized!!"});
+        return; 
+    }
+
+    const userId = session.userId;
+    const user = await users.findOne({_id: new ObjectId(userId)});
+
+    if(!user){
+        res.status(401).send({massage: "Unauthorized!!"});
+        return; 
+    }
+
+    req.user = user;
+
+    next();
+}
+
+// Verify Seeker
+const verifySeeker = async(req, res, next)=>{
+    if(req.user.role !== 'seeker'){
+        res.status(403).send({message: "Forbidden!!"});
+        return;
+    };
+    next();
+}
+
+// Verify Recruiter
+const verifyRecruiter = async(req, res, next)=>{
+    if(req.user.role !== 'recruiter'){
+        res.status(403).send({message: "Forbidden!!"});
+        return;
+    };
+    next();
+}
+
+// Verify Admin
+const verifyAdmin = async(req, res, next)=>{
+    if(req.user.role !== 'admin'){
+        res.status(403).send({message: "Forbidden!!"});
+        return;
+    };
+    next();
+}
+
+
+
 app.get('/user/:userId/premium', async(req, res) => {
     const {userId} = req.params;
     const result = await users.findOne({_id: new ObjectId(userId)}, {projection: { premium : 1 }})
@@ -46,7 +116,7 @@ app.get('/user/:userId/premium', async(req, res) => {
 })
 
 
-app.patch('/user/:Id/role', async (req, res)=>{
+app.patch('/user/:Id/role', tokenVerify, verifyAdmin, async (req, res)=>{
     const {Id} = req.params;
     const query = {_id: new ObjectId(Id)};
     const updateDoc = {
@@ -98,11 +168,12 @@ app.get('/jobs', async (req, res) => {
 app.get('/job/:Id', async(req, res)=>{
     const {Id} = req.params;
     const result = await jobsCollection.findOne({_id: new ObjectId(Id)});
+
     res.send(result);
 })
 
 
-app.post('/add-job', async(req, res)=>{
+app.post('/add-job', tokenVerify, verifyRecruiter, async(req, res)=>{
     const newData = {
         ...req.body,
         createdAt: new Date(),
@@ -128,7 +199,7 @@ app.get('/jobs/:userId/user', async(req, res)=>{
 
 // Job Applications area
 
-app.post('/job-applications', async (req, res) => {
+app.post('/job-applications', tokenVerify, verifySeeker, async (req, res) => {
     try {
         
         const {jobId, userId} = req.body;
@@ -185,7 +256,7 @@ app.get('/job-applications/count/:userId', async(req, res)=>{
     res.send({count: result});
 });
 
-app.get('/job-applications/:userId', async(req, res)=>{
+app.get('/job-applications/:userId', tokenVerify, async(req, res)=>{
     const {userId} = req.params;
 
     // Check valid user ID
