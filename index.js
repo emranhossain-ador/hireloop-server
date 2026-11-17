@@ -46,6 +46,20 @@ app.get('/user/:userId/premium', async(req, res) => {
 })
 
 
+app.patch('/user/:Id/role', async (req, res)=>{
+    const {Id} = req.params;
+    const query = {_id: new ObjectId(Id)};
+    const updateDoc = {
+        $set:{
+            role: req.body.role
+        }
+    };
+
+    const result = await users.updateOne(query, updateDoc);
+    res.send(result);
+});
+
+
 app.get('/jobs', async (req, res) => {
 
     const query = {};
