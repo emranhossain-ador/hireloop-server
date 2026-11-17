@@ -108,6 +108,10 @@ const verifyAdmin = async(req, res, next)=>{
 }
 
 
+app.get('/users', tokenVerify, verifyAdmin, async(req, res)=>{
+    const result = await users.find().toArray();
+    res.send(result);
+})
 
 app.get('/user/:userId/premium', async(req, res) => {
     const {userId} = req.params;
